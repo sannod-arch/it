@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT skyriaus užduočių valdymas</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --pri:#1D9E75;--pri-lt:#E1F5EE;--pri-dk:#0F6E56;
+  --amber:#EF9F27;--amber-lt:#FAEEDA;--amber-dk:#854F0B;
+  --red:#E24B4A;--red-lt:#FCEBEB;
+  --blue:#378ADD;--blue-lt:#E6F1FB;--blue-dk:#185FA5;
+  --bg:#FAFAF8;--bg2:#F1EFE8;--bg3:#fff;
+  --text:#1a1a18;--text2:#5F5E5A;--text3:#888780;
+  --border:#D3D1C7;--border2:#B4B2A9;
+  --radius:8px;--radius-lg:12px;
+  --shadow-lg:0 4px 24px rgba(0,0,0,.14);
+}
+@media(prefers-color-scheme:dark){
+  :root{--bg:#1a1a18;--bg2:#2C2C2A;--bg3:#232321;--text:#F1EFE8;--text2:#B4B2A9;--text3:#888780;--border:#444441;--border2:#5F5E5A;}
+}
+html,body{height:100%;font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+#app{display:grid;grid-template-rows:56px 1fr;height:100vh;overflow:hidden}
+header{background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.5rem;gap:1rem;z-index:20}
+header h1{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.sub{font-size:12px;color:var(--text3)}
+.spacer{flex:1}
+.add-btn{background:var(--pri);color:#fff;border:none;padding:7px 16px;border-radius:var(--radius);font-size:13px;cursor:pointer;font-weight:500;font-family:inherit;display:flex;align-items:center;gap:5px}
+.add-btn:hover{background:var(--pri-dk)}
+.main{display:grid;grid-template-columns:196px 1fr;overflow:hidden}
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);padding:.75rem 0;overflow-y:auto;display:flex;flex-direction:column;gap:1px}
+.sb-sec{padding:0 1rem;font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin:12px 0 4px}
+.nav-item{padding:7px 1rem;font-size:13px;cursor:pointer;color:var(--text2);display:flex;align-items:center;gap:8px;border-left:2px solid transparent;transition:all .1s}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--pri-lt);color:var(--pri-dk);border-left-color:var(--pri);font-weight:500}
+.nav-item svg{width:14px;height:14px;opacity:.55;flex-shrink:0}
+.nav-item.active svg{opacity:1}
+.sb-filters{padding:0 .75rem;display:flex;flex-direction:column;gap:6px}
+.sb-sel{width:100%;font-size:12px;padding:5px 7px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-family:inherit;cursor:pointer}
+.sb-sel:focus{outline:none;border-color:var(--pri)}
+.sb-clear{font-size:12px;padding:5px 8px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);background:none;color:var(--text3);font-family:inherit;width:100%}
+.sb-clear:hover{background:var(--bg3)}
+.content{overflow-y:auto;padding:1.25rem 1.5rem}
+.tbar{display:flex;align-items:center;gap:8px;margin-bottom:.75rem;flex-wrap:wrap}
+.tbar input[type=text]{font-size:12px;padding:5px 9px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg3);color:var(--text);font-family:inherit;height:30px;width:220px}
+.tbar input:focus{outline:none;border-color:var(--pri)}
+.task-count{font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+.icon-btn{background:none;border:1px solid var(--border);border-radius:var(--radius);padding:5px 9px;cursor:pointer;color:var(--text3);font-size:12px;font-family:inherit;display:flex;align-items:center;gap:4px;height:30px}
+.icon-btn:hover{background:var(--bg2);color:var(--text)}
+.icon-btn.on{border-color:var(--pri);color:var(--pri-dk);background:var(--pri-lt)}
+.table-wrap{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.task-table{width:100%;border-collapse:collapse;font-size:12px}
+.task-table thead{position:sticky;top:0;z-index:5}
+.task-table th{background:var(--bg2);border-bottom:1px solid var(--border);white-space:nowrap;padding:0;vertical-align:top}
+.th-label{padding:7px 12px 5px;font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:3px;user-select:none}
+.th-label:hover{color:var(--text)}
+.sort-ic{font-size:9px;opacity:.5}
+.th-fi{padding:0 6px 6px}
+.cf-sel,.cf-inp{width:100%;font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:5px;background:var(--bg3);color:var(--text);font-family:inherit;height:24px}
+.cf-sel:focus,.cf-inp:focus{outline:none;border-color:var(--pri)}
+.task-table td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text)}
+.task-table tr:last-child td{border-bottom:none}
+.task-table tbody tr:hover td{background:var(--bg2)}
+.task-table tbody tr{cursor:pointer}
+.trunc{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:500;white-space:nowrap;font-family:'IBM Plex Mono',monospace}
+.b-apvis{background:#E6F1FB;color:#185FA5}
+.b-naujos{background:#EAF3DE;color:#3B6D11}
+.b-esamos{background:#F1EFE8;color:#5F5E5A}
+.b-doc{background:#FAEEDA;color:#854F0B}
+.b-p10{background:#FCEBEB;color:#A32D2D}
+.b-p9{background:#FAEEDA;color:#854F0B}
+.b-p8{background:#E6F1FB;color:#185FA5}
+.b-p7{background:#EAF3DE;color:#3B6D11}
+.b-plow{background:#F1EFE8;color:#5F5E5A}
+.spill{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:none;font-family:inherit;white-space:nowrap}
+.spill:hover{opacity:.8}
+.s-ne{background:#F1EFE8;color:#5F5E5A}
+.s-vy{background:#E6F1FB;color:#185FA5}
+.s-ba{background:#EAF3DE;color:#3B6D11}
+.s-bl{background:#FCEBEB;color:#A32D2D}
+.s-la{background:#FAEEDA;color:#854F0B}
+.pbar-wrap{width:64px;height:5px;background:var(--bg2);border-radius:3px;display:inline-block;vertical-align:middle}
+.pbar{height:5px;border-radius:3px;background:var(--pri)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;padding:2rem 1rem;z-index:300;overflow-y:auto;backdrop-filter:blur(3px)}
+.modal{background:var(--bg3);border-radius:var(--radius-lg);border:1px solid var(--border);width:100%;max-width:700px;box-shadow:var(--shadow-lg)}
+.modal-hd{padding:1.25rem 1.5rem .75rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}
+.modal-hd h2{font-size:15px;font-weight:600;line-height:1.4;flex:1}
+.nr-chip{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);font-weight:400;display:block;margin-bottom:3px}
+.close-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text3);line-height:1;padding:0;flex-shrink:0}
+.close-btn:hover{color:var(--text)}
+.modal-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);padding:0 1.5rem}
+.mtab{padding:7px 14px;font-size:12px;cursor:pointer;border:none;background:none;color:var(--text3);border-bottom:2px solid transparent;font-family:inherit}
+.mtab.active{color:var(--pri-dk);border-bottom-color:var(--pri);font-weight:500}
+.mtab:hover:not(.active){color:var(--text)}
+.modal-body{padding:1.25rem 1.5rem}
+.modal-pane{display:none}
+.modal-pane.active{display:block}
+.fg{margin-bottom:.85rem}
+.fg label{display:block;font-size:10px;color:var(--text3);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.fg input,.fg select,.fg textarea{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;background:var(--bg);color:var(--text);font-family:inherit}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--pri)}
+.fg textarea{min-height:68px;resize:vertical;line-height:1.5}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn-pri{background:var(--pri);color:#fff;border:none;padding:8px 18px;border-radius:var(--radius);font-size:13px;cursor:pointer;font-weight:500;font-family:inherit}
+.btn-pri:hover{background:var(--pri-dk)}
+.btn-sec{background:none;border:1px solid var(--border);padding:8px 18px;border-radius:var(--radius);font-size:13px;cursor:pointer;color:var(--text2);font-family:inherit}
+.btn-sec:hover{background:var(--bg2)}
+.btn-del{background:none;border:1px solid var(--red);padding:8px 18px;border-radius:var(--radius);font-size:13px;cursor:pointer;color:var(--red);font-family:inherit}
+.btn-del:hover{background:var(--red-lt)}
+.modal-ft{display:flex;gap:8px;justify-content:space-between;align-items:center;padding:1rem 1.5rem;border-top:1px solid var(--border)}
+.mf-r{display:flex;gap:8px}
+.cbox{background:var(--bg2);border-radius:var(--radius);padding:9px 12px;margin-bottom:7px}
+.cmeta{font-size:10px;color:var(--text3);margin-bottom:3px;font-family:'IBM Plex Mono',monospace}
+.ctext{font-size:13px;color:var(--text);line-height:1.5}
+.sec-div{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;padding:7px 0 5px;border-top:1px solid var(--border);margin-top:1rem}
+.risk-box{background:var(--amber-lt);border-left:3px solid var(--amber);border-radius:0 var(--radius) var(--radius) 0;padding:8px 12px;font-size:12px;color:var(--amber-dk);margin:.5rem 0}
+.plan-grid{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.plan-item{background:var(--bg2);border-radius:var(--radius);padding:6px 9px;font-size:11px;min-width:80px}
+.plan-m{font-weight:600;color:var(--pri-dk);font-size:9px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+.plan-t{color:var(--text2);font-size:11px;line-height:1.3}
+.prog-row{display:flex;align-items:center;gap:10px}
+.prog-row input[type=range]{flex:1;accent-color:var(--pri)}
+.prog-val{font-size:13px;font-weight:500;min-width:36px;font-family:'IBM Plex Mono',monospace}
+.kanban-wrap{display:flex;gap:12px;overflow-x:auto;padding-bottom:1rem;align-items:flex-start}
+.k-col{min-width:210px;flex:1;max-width:260px}
+.k-col-hd{display:flex;align-items:center;gap:7px;margin-bottom:9px;padding-bottom:7px}
+.k-col-title{font-size:12px;font-weight:500}
+.k-cnt{border-radius:10px;padding:1px 7px;font-size:11px;font-family:'IBM Plex Mono',monospace}
+.k-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:9px 11px;margin-bottom:7px;cursor:pointer;transition:border-color .12s}
+.k-card:hover{border-color:var(--pri)}
+.cal-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:5px;margin-bottom:.75rem}
+.cal-ml{font-size:10px;color:var(--text3);text-align:center;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.cal-mb{min-height:86px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:3px;display:flex;flex-direction:column;gap:2px}
+.cal-item{font-size:9px;padding:2px 4px;border-radius:3px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.4}
+.cal-item:hover{opacity:.8}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:.9rem 1.1rem}
+.stat-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.stat-val{font-size:26px;font-weight:600;font-family:'IBM Plex Mono',monospace;line-height:1}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:3px}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem}
+.chart-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.1rem}
+.ct-title{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.9rem}
+.chart-wrap{position:relative;height:190px}
+.prio-row{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.prio-lbl{font-size:10px;font-family:'IBM Plex Mono',monospace;width:26px;color:var(--text3);text-align:right}
+.prio-bg{flex:1;height:14px;background:var(--bg2);border-radius:3px;overflow:hidden}
+.prio-f{height:14px;border-radius:3px}
+.prio-n{font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace;width:18px}
+.pw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:7px}
+.pw-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:9px 11px}
+.pw-name{font-size:12px;font-weight:500;margin-bottom:5px}
+.pw-bb{height:4px;background:var(--bg2);border-radius:2px;margin-bottom:4px}
+.pw-bf{height:4px;border-radius:2px;background:var(--pri)}
+.pw-c{font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+.empty{text-align:center;padding:2.5rem;color:var(--text3);font-size:13px}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+@media(max-width:880px){.main{grid-template-columns:1fr}.sidebar{display:none}.stats-grid{grid-template-columns:1fr 1fr}.cal-grid{grid-template-columns:repeat(6,1fr)}.charts-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--pri)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    <h1>IT skyriaus užduočių valdymas</h1>
+    <span class="sub">2026 m. veiklos planas</span>
+    <span id="save-chip" style="font-size:11px;color:var(--pri-dk);background:var(--pri-lt);padding:2px 9px;border-radius:10px;font-family:'IBM Plex Mono',monospace;display:none">● išsaugota</span>
+    <div class="spacer"></div>
+    <button class="add-btn" onclick="openEditModal(null)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nauja užduotis
+    </button>
+  </header>
+  <div class="main">
+    <nav class="sidebar">
+      <div class="sb-sec">Rodiniai</div>
+      <div class="nav-item active" onclick="switchView('sarasas',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Užduočių sąrašas
+      </div>
+      <div class="nav-item" onclick="switchView('kanban',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="18"/><rect x="10" y="3" width="5" height="12"/><rect x="17" y="3" width="5" height="8"/></svg>
+        Kanban
+      </div>
+      <div class="nav-item" onclick="switchView('kalendorius',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Kalendorius
+      </div>
+      <div class="nav-item" onclick="switchView('statistika',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Statistika
+      </div>
+      <div class="sb-sec" style="margin-top:.75rem">Greiti filtrai</div>
+      <div class="sb-filters">
+        <select class="sb-sel" id="sb-a" onchange="applyFilters()"><option value="">Visi darbuotojai</option></select>
+        <select class="sb-sel" id="sb-t" onchange="applyFilters()">
+          <option value="">Visi tipai</option>
+          <option>APVIS</option><option>Naujos</option><option>Esamos</option><option>Dokumentacija</option>
+        </select>
+        <select class="sb-sel" id="sb-s" onchange="applyFilters()">
+          <option value="">Visi statusai</option>
+          <option>Nepradėta</option><option>Vykdoma</option><option>Baigta</option><option>Blokuota</option><option>Laukiama sprendimo</option>
+        </select>
+        <button class="sb-clear" onclick="clearAll()">✕ Išvalyti filtrus</button>
+        <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">
+          <button class="sb-clear" onclick="resetToDefaults()" style="color:var(--red);border-color:var(--red);opacity:.7" title="Grąžina pradinius duomenis iš failo">↺ Grąžinti pradinius</button>
+        </div>
+      </div>
+    </nav>
+    <div class="content" id="area"></div>
+  </div>
+</div>
+<div id="modal" style="display:none">
+  <div class="overlay" onclick="closeOuter(event)">
+    <div class="modal" id="mi"></div>
+  </div>
+</div>
+<script>
+const MN=['Sausis','Vasaris','Kovas','Balandis','Gegužė','Birželis','Liepa','Rugpjūtis','Rugsėjis','Spalis','Lapkritis','Gruodis'];
+const ST=['Nepradėta','Vykdoma','Baigta','Blokuota','Laukiama sprendimo'];
+const SC={'Nepradėta':'ne','Vykdoma':'vy','Baigta':'ba','Blokuota':'bl','Laukiama sprendimo':'la'};
+const STC={'Nepradėta':'#888780','Vykdoma':'#378ADD','Baigta':'#1D9E75','Blokuota':'#E24B4A','Laukiama sprendimo':'#EF9F27'};
+const PERS=['Albertas','Asta','Indrė','Rapolas','Rasa','Rimas','Eleonora','Miroslav','Audrius','Mindaugas','Pavel','Marius','Viačeslavas','Dainius','Vytautas','Ingrida','Neringa','Dovilė','Artūras','Jūratė','PMO','Inga'];
+
+let view='sarasas',ftasks=[],scol=null,sdir=1,showCF=false;
+let CF={nr:'',sritis:'',veikla:'',prioritetas:'',tipas:'',savininkas:'',atsakingas:'',statusas:'',eiga:''};
+let chartT=null,chartS=null;
+
+let tasks=[
+  {id:1,nr:'32',sritis:'Aukščiausia institucija',veikla:'Atnaujinta sistemų dokumentacija (nuostatai pagal įstatymo pasikeitimus)',prioritetas:10,tipas:'Dokumentacija',savininkas:'Miroslav',atsakingas:'Eleonora',statusas:'Vykdoma',eiga:30,komentarai:[{autorius:'Albertas',data:'2026-02-10',tekstas:'Pradėtas nuostatų projektas po bendros inventorizacijos.'}],rizika:'',mp:{3:'Nuostatų projektas',4:'Derinimas viduje',6:'Derinimas išorėje',8:'Korekcijos',10:'Pakartotinis derinimas',11:'Korekcijos',12:'Patvirtinimas'}},
+  {id:2,nr:'31a',sritis:'Aukščiausia institucija',veikla:'Sudaryti sistemų sąveikos sąrašą / schemą',prioritetas:10,tipas:'Esamos',savininkas:'Miroslav',atsakingas:'Eleonora',statusas:'Vykdoma',eiga:40,komentarai:[],rizika:'',mp:{3:'Sistemų sąrašas',4:'Teikti informaciją nuostatų parengimui',5:'Teikti informaciją'}},
+  {id:3,nr:'36',sritis:'Aukščiausia institucija',veikla:'Sutvarkytos APVIS DB bendram analizės įrankiui (VDVIS / Palantir)',prioritetas:10,tipas:'Esamos',savininkas:'Miroslav',atsakingas:'Rimas',statusas:'Vykdoma',eiga:20,komentarai:[{autorius:'Rimas',data:'2026-01-15',tekstas:'Susipažinimas su VDVIS (Palantir). Paruošiamas pristatymas vadovams.'}],rizika:'',mp:{1:'Susipažinimas su VDVIS',2:'Susitikimas su veikla',3:'Analitikos darbai',4:'Analitikos darbai',5:'Analitikos darbai',6:'Analitikos darbai'}},
+  {id:4,nr:'44',sritis:'Darbuotojų valdymas',veikla:'Darbuotojų Onboarding/Offboarding prieigų ir teisių skaitmeninimas',prioritetas:10,tipas:'Naujos',savininkas:'Dovilė',atsakingas:'Mindaugas',statusas:'Vykdoma',eiga:15,komentarai:[{autorius:'Albertas',data:'2026-03-01',tekstas:'Pradėtas proceso aprašymas. Personalo IS analizė atlikta.'}],rizika:'',mp:{2:'Analizė su Personalo IS',3:'Pristatymas vadovybei',4:'Pirkimas',5:'Darbas su tiekėju',6:'Darbas su tiekėju',7:'Darbas su tiekėju',8:'Darbas su tiekėju',9:'Darbas su tiekėju'}},
+  {id:5,nr:'45',sritis:'Kibernetinis saugumas',veikla:'Kibernetinio saugumo operacijų centro (SOC) sprendimo įgyvendinimas',prioritetas:10,tipas:'Naujos',savininkas:'Audrius',atsakingas:'Viačeslavas',statusas:'Nepradėta',eiga:0,komentarai:[],rizika:'',mp:{}},
+  {id:6,nr:'9',sritis:'APVIS',veikla:'4.4. Grąžintinų lėšų procesas APVIS (proceso peržiūra ir skaitmeninimas)',prioritetas:9,tipas:'APVIS',savininkas:'Rasa',atsakingas:'Rapolas',statusas:'Vykdoma',eiga:50,komentarai:[{autorius:'Rapolas',data:'2026-02-20',tekstas:'Atlikta analizė. Pristatymas vadovybei. Laukiama sprendimo.'}],rizika:'Neapibrėžtas poreikis',mp:{2:'Atlikta analizė',3:'Užsakymo kontrolė',4:'Vykdymas',5:'Vykdymas',6:'Vykdymas'}},
+  {id:7,nr:'10',sritis:'APVIS',veikla:'4.5. Paskolų grafikų skaitmenizavimas',prioritetas:9,tipas:'APVIS',savininkas:'Rasa',atsakingas:'Rapolas',statusas:'Vykdoma',eiga:35,komentarai:[{autorius:'Rasa',data:'2026-02-15',tekstas:'Analizė vykdoma. Vertinti kartu su mokėjimo pažymomis.'}],rizika:'',mp:{2:'Atlikta analizė',3:'Vykdymas',4:'Vykdymas',5:'Vykdymas',6:'Vykdymas'}},
+  {id:8,nr:'11',sritis:'APVIS',veikla:'4.6. Mokėjimo pažymų skaitmeninimo procesas',prioritetas:9,tipas:'APVIS',savininkas:'Rasa',atsakingas:'Rapolas',statusas:'Laukiama sprendimo',eiga:60,komentarai:[{autorius:'Rapolas',data:'2026-03-05',tekstas:'Analizė atlikta. Reikia vadovybės sprendimo dėl realizacijos.'}],rizika:'',mp:{2:'Atlikta analizė',3:'Vykdymas',4:'Vykdymas',5:'Vykdymas',6:'Vykdymas'}},
+  {id:9,nr:'12',sritis:'APVIS',veikla:'4.9. Paraiškų vertinimo / pirkimų terminų skaičiavimas APVIS',prioritetas:9,tipas:'APVIS',savininkas:'Vytautas',atsakingas:'Rasa',statusas:'Vykdoma',eiga:25,komentarai:[],rizika:'',mp:{3:'Atlikta analizė',4:'Užsakymas',5:'Vykdymas',6:'Vykdymas',7:'Vykdymas'}},
+  {id:10,nr:'14',sritis:'APVIS',veikla:'4.3. Sutarčių su projektų vykdytojais pasirašymas / keitimas APVIS',prioritetas:9,tipas:'APVIS',savininkas:'Vytautas',atsakingas:'Rasa',statusas:'Nepradėta',eiga:0,komentarai:[],rizika:'Neapibrėžtas poreikis',mp:{4:'Atlikta analizė',5:'Užsakymas',6:'Vykdymas',7:'Vykdymas',8:'Vykdymas',9:'Vykdymas'}},
+  {id:11,nr:'38',sritis:'APVIS',veikla:'Kvietimo lėšų kontrolė: likučiai, atvaizdavimas, automatinis stabdymas',prioritetas:8,tipas:'APVIS',savininkas:'Vytautas',atsakingas:'Eleonora',statusas:'Vykdoma',eiga:45,komentarai:[{autorius:'Rasa',data:'2026-01-20',tekstas:'a. ir b. analizė atlikta. Registruota JIRA.'}],rizika:'',mp:{1:'Analizė, JIRA',2:'Tęstinis užsakymas',3:'Vykdymas',4:'Vykdymas'}},
+  {id:12,nr:'35',sritis:'APVIS',veikla:'Susijusių posistemių pakišimas po apvis.apva.lt subdomenu',prioritetas:8,tipas:'APVIS',savininkas:'Miroslav',atsakingas:'Rasa',statusas:'Nepradėta',eiga:0,komentarai:[],rizika:'',mp:{5:'Analizė po nuostatų',6:'Užsakymas',7:'Vykdymas',8:'Vykdymas'}},
+  {id:13,nr:'42',sritis:'Infrastruktūra',veikla:'Darbo vietų modernizavimas (Windows 11 migracija)',prioritetas:9,tipas:'Esamos',savininkas:'Audrius',atsakingas:'Pavel',statusas:'Vykdoma',eiga:30,komentarai:[],rizika:'',mp:{1:'Suderinamumo analizė',2:'Masinis perrašymas',3:'Masinis perrašymas',4:'Baigimas'}},
+  {id:14,nr:'43',sritis:'Infrastruktūra',veikla:'Mobiliųjų įrenginių valdymo (MDM) diegimas',prioritetas:9,tipas:'Esamos',savininkas:'Audrius',atsakingas:'Marius',statusas:'Vykdoma',eiga:20,komentarai:[],rizika:'',mp:{2:'Konfigūravimas',3:'Diegimas',4:'Testavimas'}},
+  {id:15,nr:'46',sritis:'Infrastruktūra',veikla:'Unifikuotos Wi-Fi infrastruktūros plėtra',prioritetas:9,tipas:'Naujos',savininkas:'Audrius',atsakingas:'Viačeslavas',statusas:'Nepradėta',eiga:0,komentarai:[],rizika:'',mp:{}},
+  {id:16,nr:'47',sritis:'Aukščiausia institucija',veikla:'Užklausų įrankio tobulinimas (JIRA / Mantis / Redmine)',prioritetas:8,tipas:'Naujos',savininkas:'Audrius',atsakingas:'Mindaugas',statusas:'Nepradėta',eiga:0,komentarai:[{autorius:'Eleonora',data:'2026-01-10',tekstas:'Reikia apsispręsti dėl vieno įrankio naudojimo.'}],rizika:'',mp:{}},
+  {id:17,nr:'34',sritis:'Aukščiausia institucija',veikla:'Įvertintas APVIS vystymas pagal Dizaino krypties informaciją',prioritetas:8,tipas:'Naujos',savininkas:'Miroslav',atsakingas:'Eleonora',statusas:'Laukiama sprendimo',eiga:10,komentarai:[{autorius:'Miroslav',data:'2026-02-28',tekstas:'Atskirai detalizuoti vadovybei dėl DK pasiūlymo!'}],rizika:'',mp:{}},
+  {id:18,nr:'3',sritis:'APVIS',veikla:'4.12. ŠESD registro skaitmeninimo užbaigimas',prioritetas:7,tipas:'APVIS',savininkas:'Artūras',atsakingas:'Indrė',statusas:'Vykdoma',eiga:40,komentarai:[],rizika:'Kaštai neproporcingi naudai',mp:{2:'Atlikta analizė, pristatymas',3:'Užsakymas',4:'Vykdymas',5:'Vykdymas',6:'Vykdymas',7:'Peržiūra'}},
+  {id:19,nr:'4',sritis:'APVIS',veikla:'4.1. Patikrų vietoje proceso perkėlimas į APVIS',prioritetas:7,tipas:'APVIS',savininkas:'Dainius',atsakingas:'Rasa',statusas:'Nepradėta',eiga:0,komentarai:[],rizika:'',mp:{3:'Analizė, JIRA',4:'Tęstinis užsakymas',5:'Vykdymas',6:'Vykdymas',7:'Vykdymas'}},
+  {id:20,nr:'15',sritis:'APVIS',veikla:'4.8. Viešųjų pirkimų patikros proceso peržiūra APVIS',prioritetas:7,tipas:'Dokumentacija',savininkas:'Dovilė',atsakingas:'Eleonora',statusas:'Nepradėta',eiga:0,komentarai:[],rizika:'Neapibrėžtas poreikis',mp:{}},
+  {id:21,nr:'2',sritis:'Aukščiausia institucija',veikla:'2.2. Strategijos stebėsenos sistemos tęstinumas 2026 (II etapas)',prioritetas:6,tipas:'Esamos',savininkas:'Ingrida',atsakingas:'Rapolas',statusas:'Vykdoma',eiga:65,komentarai:[{autorius:'Rapolas',data:'2026-02-25',tekstas:'I etapo testavimas pagal specifikaciją.'}],rizika:'',mp:{1:'I etapo testavimas',2:'Testavimas, dokumentacija',4:'Ruošiama VS'}},
+  {id:22,nr:'13',sritis:'APVIS',veikla:'1.2. Techninio įrankio patirties duomenų surinkimui parinkimas ir diegimas',prioritetas:6,tipas:'APVIS',savininkas:'Neringa',atsakingas:'Albertas',statusas:'Vykdoma',eiga:20,komentarai:[{autorius:'Albertas',data:'2026-02-10',tekstas:'Susitikimas su Neringa R. Analizė 2026-02-10.'}],rizika:'Neapibrėžtas poreikis',mp:{2:'Susitikimas, analizė',3:'Pirkimas / sutartis',5:'Darbas su tiekėju',6:'Darbas su tiekėju'}},
+  {id:23,nr:'29',sritis:'Personalo valdymas',veikla:'Personalo administravimo įrankis (darbų sauga + teisių valdymas)',prioritetas:1,tipas:'Naujos',savininkas:'-',atsakingas:'Rapolas',statusas:'Laukiama sprendimo',eiga:50,komentarai:[{autorius:'Rapolas',data:'2026-03-10',tekstas:'Analizė atlikta. Reikia vadovybės sprendimo.'}],rizika:'Galimai dideli kaštai',mp:{3:'Pristatymas vadovybei',4:'Pirkimas',7:'Darbas su tiekėju',8:'Darbas su tiekėju',9:'Darbas su tiekėju',10:'Darbas su tiekėju',11:'Darbas su tiekėju',12:'Darbas su tiekėju'}},
+  {id:24,nr:'16',sritis:'Darbuotojų valdymas',veikla:'Darbų saugos ir sveikatos įrankio diegimo analizė',prioritetas:1,tipas:'Naujos',savininkas:'Dovilė',atsakingas:'Rapolas',statusas:'Vykdoma',eiga:30,komentarai:[],rizika:'Papildomas įrankis veikloje',mp:{3:'Atlikta analizė, pristatymas',4:'Pirkimas',7:'Vykdymas',8:'Vykdymas',9:'Vykdymas',10:'Vykdymas',11:'Vykdymas',12:'Vykdymas'}},
+  {id:25,nr:'39',sritis:'Aukščiausia institucija',veikla:'Procesų ir poreikių analizė robotizavimo galimybėms (RPA)',prioritetas:1,tipas:'Naujos',savininkas:'Vytautas',atsakingas:'Asta',statusas:'Vykdoma',eiga:25,komentarai:[{autorius:'Asta',data:'2026-01-20',tekstas:'Pristatymas Roboto4. Susitikimas su veikla.'}],rizika:'',mp:{1:'Pristatymas, susitikimas',2:'Užsakymas',3:'Užsakymas',5:'Susitikimas su veikla',6:'Užsakymas',7:'Užsakymas',9:'Pirkimas',10:'Vykdymas',11:'Vykdymas',12:'Vykdymas'}},
+  {id:26,nr:'40',sritis:'Aukščiausia institucija',veikla:'Dokumentų ir duomenų naikinimas pagal archyvavimo taisykles',prioritetas:1,tipas:'Esamos',savininkas:'Inga',atsakingas:'Rapolas',statusas:'Vykdoma',eiga:15,komentarai:[],rizika:'',mp:{1:'Susitikimas su veikla',2:'Susitikimas',4:'Atlikta analizė',5:'Užsakymas',6:'Vykdymas',7:'Vykdymas',8:'Vykdymas'}},
+  {id:27,nr:'DI',sritis:'Aukščiausia institucija',veikla:'4.10. DI panaudojimo galimybių analizė ir kaštų-naudos vertinimas',prioritetas:4,tipas:'Naujos',savininkas:'Miroslav',atsakingas:'Asta',statusas:'Vykdoma',eiga:10,komentarai:[],rizika:'Neapibrėžtas poreikis',mp:{2:'Ataskaita/pristatymas',4:'Ataskaita/pristatymas',6:'Ataskaita/pristatymas',9:'Ataskaita/pristatymas',11:'Ataskaita/pristatymas'}},
+  {id:28,nr:'25',sritis:'PMO',veikla:'2.8. JIRA tobulinimas',prioritetas:1,tipas:'Esamos',savininkas:'PMO',atsakingas:'Rimas',statusas:'Vykdoma',eiga:30,komentarai:[{autorius:'Rimas',data:'2026-03-01',tekstas:'Susipažinimas ir mokymasis. Poreikių analizė.'}],rizika:'Neapibrėžtas poreikis',mp:{3:'Poreikių analizė',4:'Vykdymas',5:'Vykdymas',6:'Vykdymas',7:'Vykdymas',8:'Vykdymas',9:'Vykdymas',10:'Vykdymas',11:'Vykdymas',12:'Vykdymas'}},
+  {id:29,nr:'SKF',sritis:'APVIS',veikla:'SKF: mokėjimų proceso skaitmeninimas + dvigubo finansavimo kontrolė',prioritetas:8,tipas:'APVIS',savininkas:'Jūratė',atsakingas:'Eleonora',statusas:'Vykdoma',eiga:20,komentarai:[],rizika:'',mp:{3:'Dvigubo finansavimo analizė',4:'Užsakymas'}},
+  {id:30,nr:'Žem',sritis:'Analitika',veikla:'Žemėlapiai: išmokų atvaizdavimas, elektrinių ir gyventojų žemėlapiai',prioritetas:0,tipas:'Esamos',savininkas:'-',atsakingas:'Rimas',statusas:'Vykdoma',eiga:35,komentarai:[],rizika:'',mp:{3:'Gyventojų sąrašai, elektrinių žemėlapis',6:'BO žemėlapiai'}}
+];
+
+const STORAGE_KEY='it_tasks_v1';
+
+function persist(){
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(tasks));}catch(e){console.warn('save failed',e);return;}
+  const chip=document.getElementById('save-chip');
+  if(chip){chip.style.display='inline';clearTimeout(chip._t);chip._t=setTimeout(()=>{chip.style.display='none';},2000);}
+}
+function loadStored(){try{const r=localStorage.getItem(STORAGE_KEY);if(r){const p=JSON.parse(r);if(Array.isArray(p)&&p.length>0)tasks=p;}}catch(e){}}
+function showToast(msg,clr){
+  const d=document.createElement('div');
+  d.style.cssText=`position:fixed;bottom:1.5rem;right:1.5rem;background:${clr||'#0F6E56'};color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2);transition:opacity .4s`;
+  d.textContent=msg;document.body.appendChild(d);
+  setTimeout(()=>{d.style.opacity='0';setTimeout(()=>d.remove(),400);},2500);
+}
+function resetToDefaults(){
+  if(!confirm('Ar tikrai norite grąžinti pradinius duomenis? Visi pakeitimai bus prarasti.'))return;
+  try{localStorage.removeItem(STORAGE_KEY);}catch(e){}
+  location.reload();
+}
+
+ftasks=[...tasks];
+
+function init(){
+  loadStored();
+  ftasks=[...tasks];
+  const all=[...new Set(tasks.flatMap(t=>[t.savininkas,t.atsakingas]).filter(p=>p&&p!=='-'))].sort();
+  document.getElementById('sb-a').innerHTML='<option value="">Visi darbuotojai</option>'+all.map(p=>`<option>${p}</option>`).join('');
+  render();
+  try{if(localStorage.getItem(STORAGE_KEY))showToast('Duomenys įkelti iš naršyklės atminties');}catch(e){}
+}
+
+function applyFilters(){
+  const sba=v('sb-a'),sbt=v('sb-t'),sbs=v('sb-s'),q=v('ts')||'';
+  ftasks=tasks.filter(t=>{
+    if(sba&&t.savininkas!==sba&&t.atsakingas!==sba)return false;
+    if(sbt&&t.tipas!==sbt)return false;
+    if(sbs&&t.statusas!==sbs)return false;
+    if(CF.nr&&!t.nr.toLowerCase().includes(CF.nr.toLowerCase()))return false;
+    if(CF.sritis&&t.sritis!==CF.sritis)return false;
+    if(CF.veikla&&!t.veikla.toLowerCase().includes(CF.veikla.toLowerCase()))return false;
+    if(CF.prioritetas&&String(t.prioritetas)!==CF.prioritetas)return false;
+    if(CF.tipas&&t.tipas!==CF.tipas)return false;
+    if(CF.savininkas&&t.savininkas!==CF.savininkas)return false;
+    if(CF.atsakingas&&t.atsakingas!==CF.atsakingas)return false;
+    if(CF.statusas&&t.statusas!==CF.statusas)return false;
+    if(CF.eiga){const[lo,hi]=CF.eiga.split('-').map(Number);if(isNaN(hi)?t.eiga<lo:(t.eiga<lo||t.eiga>hi))return false;}
+    if(q&&!t.veikla.toLowerCase().includes(q.toLowerCase())&&!t.nr.toLowerCase().includes(q.toLowerCase())&&!t.sritis.toLowerCase().includes(q.toLowerCase()))return false;
+    return true;
+  });
+  if(scol){ftasks.sort((a,b)=>{let av=a[scol],bv=b[scol];return(typeof av==='string'?av.localeCompare(bv):(av-bv))*sdir;});}
+  render();
+}
+
+function v(id){const e=document.getElementById(id);return e?e.value:'';}
+function scf(col,val){CF[col]=val;applyFilters();}
+function sort(col){scol===col?sdir*=-1:(scol=col,sdir=1);applyFilters();}
+function toggleCF(){showCF=!showCF;render();}
+function clearAll(){
+  ['sb-a','sb-t','sb-s'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  const e=document.getElementById('ts');if(e)e.value='';
+  CF={nr:'',sritis:'',veikla:'',prioritetas:'',tipas:'',savininkas:'',atsakingas:'',statusas:'',eiga:''};
+  scol=null;sdir=1;ftasks=[...tasks];render();
+}
+
+function switchView(name,el){
+  view=name;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');render();
+}
+
+function render(){
+  const area=document.getElementById('area');
+  if(view==='sarasas')area.innerHTML=bList();
+  else if(view==='kanban')area.innerHTML=bKanban();
+  else if(view==='kalendorius')area.innerHTML=bCal();
+  else if(view==='statistika'){area.innerHTML=bStats();setTimeout(drawCharts,80);}
+  const s=document.getElementById('ts');if(s)s.addEventListener('input',applyFilters);
+}
+
+/* helpers */
+function pb(p){const c=p>=10?'b-p10':p>=9?'b-p9':p>=8?'b-p8':p>=7?'b-p7':'b-plow';return`<span class="badge ${c}">${p}</span>`;}
+function tb(t){const m={APVIS:'b-apvis',Naujos:'b-naujos',Esamos:'b-esamos',Dokumentacija:'b-doc'};return`<span class="badge ${m[t]||'b-esamos'}">${t}</span>`;}
+function sp(s,id){return`<button class="spill s-${SC[s]||'ne'}" onclick="cySt(event,${id})">${s}</button>`;}
+function cySt(e,id){e.stopPropagation();const t=tasks.find(x=>x.id===id);const i=ST.indexOf(t.statusas);t.statusas=ST[(i+1)%ST.length];persist();applyFilters();}
+function uniq(f){return[...new Set(tasks.map(t=>t[f]).filter(Boolean))].sort();}
+function si(col){return scol===col?(sdir===1?'↑':'↓'):'↕';}
+
+/* LIST */
+function bList(){
+  const hasF=Object.values(CF).some(x=>x!=='');
+  const cfRow=showCF?`<tr>
+    <td class="th-fi"><input class="cf-inp" value="${CF.nr}" oninput="scf('nr',this.value)" placeholder="Nr." style="width:44px"></td>
+    <td class="th-fi"><select class="cf-sel" onchange="scf('sritis',this.value)"><option value="">Visos</option>${uniq('sritis').map(x=>`<option ${CF.sritis===x?'selected':''}>${x}</option>`).join('')}</select></td>
+    <td class="th-fi"><input class="cf-inp" value="${CF.veikla}" oninput="scf('veikla',this.value)" placeholder="Ieškoti..."></td>
+    <td class="th-fi"><select class="cf-sel" style="width:56px" onchange="scf('prioritetas',this.value)"><option value="">—</option>${[10,9,8,7,6,5,4,3,2,1,0].map(x=>`<option ${CF.prioritetas===String(x)?'selected':''}>${x}</option>`).join('')}</select></td>
+    <td class="th-fi"><select class="cf-sel" onchange="scf('tipas',this.value)"><option value="">Visi</option>${['APVIS','Naujos','Esamos','Dokumentacija'].map(x=>`<option ${CF.tipas===x?'selected':''}>${x}</option>`).join('')}</select></td>
+    <td class="th-fi"><select class="cf-sel" onchange="scf('savininkas',this.value)"><option value="">Visi</option>${uniq('savininkas').map(x=>`<option ${CF.savininkas===x?'selected':''}>${x}</option>`).join('')}</select></td>
+    <td class="th-fi"><select class="cf-sel" onchange="scf('atsakingas',this.value)"><option value="">Visi</option>${uniq('atsakingas').map(x=>`<option ${CF.atsakingas===x?'selected':''}>${x}</option>`).join('')}</select></td>
+    <td class="th-fi"><select class="cf-sel" onchange="scf('statusas',this.value)"><option value="">Visi</option>${ST.map(x=>`<option ${CF.statusas===x?'selected':''}>${x}</option>`).join('')}</select></td>
+    <td class="th-fi"><select class="cf-sel" onchange="scf('eiga',this.value)"><option value="">—</option><option value="0-0">0%</option><option value="1-25">1–25%</option><option value="26-50">26–50%</option><option value="51-75">51–75%</option><option value="76-99">76–99%</option><option value="100-100">100%</option></select></td>
+  </tr>`:'';
+
+  const rows=ftasks.map(t=>`<tr onclick="openView(${t.id})">
+    <td style="color:var(--text3);font-family:'IBM Plex Mono',monospace;font-size:11px">${t.nr}</td>
+    <td style="font-size:11px;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${t.sritis}">${t.sritis.length>26?t.sritis.slice(0,24)+'…':t.sritis}</td>
+    <td><span class="trunc" title="${t.veikla}" style="font-size:12px">${t.veikla}</span></td>
+    <td>${pb(t.prioritetas)}</td>
+    <td>${tb(t.tipas)}</td>
+    <td style="font-size:12px">${t.savininkas}</td>
+    <td style="font-size:12px">${t.atsakingas}</td>
+    <td onclick="event.stopPropagation()">${sp(t.statusas,t.id)}</td>
+    <td><div style="display:flex;align-items:center;gap:5px"><div class="pbar-wrap"><div class="pbar" style="width:${t.eiga}%"></div></div><span style="font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace;min-width:26px">${t.eiga}%</span></div></td>
+  </tr>`).join('');
+
+  return`<div class="tbar">
+    <input type="text" id="ts" placeholder="Ieškoti užduotyje, srity, nr..." style="width:240px">
+    <button class="icon-btn ${showCF?'on':''}" onclick="toggleCF()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      Filtrai stulpeliuose${hasF?' ●':''}
+    </button>
+    <button class="icon-btn" onclick="clearAll()">✕ Išvalyti</button>
+    <div class="spacer"></div>
+    <span class="task-count">${ftasks.length} / ${tasks.length} užduočių</span>
+  </div>
+  <div class="table-wrap"><table class="task-table">
+    <thead>
+      <tr>
+        <th style="width:46px"><div class="th-label" onclick="sort('nr')">Nr.<span class="sort-ic">${si('nr')}</span></div></th>
+        <th style="width:130px"><div class="th-label" onclick="sort('sritis')">Sritis<span class="sort-ic">${si('sritis')}</span></div></th>
+        <th><div class="th-label" onclick="sort('veikla')">Veikla / Iniciatyva<span class="sort-ic">${si('veikla')}</span></div></th>
+        <th style="width:60px"><div class="th-label" onclick="sort('prioritetas')">Prior.<span class="sort-ic">${si('prioritetas')}</span></div></th>
+        <th style="width:90px"><div class="th-label" onclick="sort('tipas')">Tipas<span class="sort-ic">${si('tipas')}</span></div></th>
+        <th style="width:108px"><div class="th-label" onclick="sort('savininkas')">Savininkas<span class="sort-ic">${si('savininkas')}</span></div></th>
+        <th style="width:108px"><div class="th-label" onclick="sort('atsakingas')">Atsakingas<span class="sort-ic">${si('atsakingas')}</span></div></th>
+        <th style="width:128px"><div class="th-label" onclick="sort('statusas')">Statusas<span class="sort-ic">${si('statusas')}</span></div></th>
+        <th style="width:100px"><div class="th-label" onclick="sort('eiga')">Eiga<span class="sort-ic">${si('eiga')}</span></div></th>
+      </tr>
+      ${cfRow}
+    </thead>
+    <tbody>${rows||'<tr><td colspan="9"><div class="empty">Nėra atitinkančių užduočių</div></td></tr>'}</tbody>
+  </table></div>`;
+}
+
+/* KANBAN */
+function bKanban(){
+  const g={};ST.forEach(s=>g[s]=[]);ftasks.forEach(t=>(g[t.statusas]||[]).push(t));
+  return`<div class="kanban-wrap">${ST.map(s=>{
+    const cl=STC[s];
+    const cards=g[s].map(t=>`<div class="k-card" onclick="openView(${t.id})">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace">${t.nr}</span>${pb(t.prioritetas)}</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.4;margin-bottom:6px">${t.veikla.length>88?t.veikla.slice(0,86)+'…':t.veikla}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11px;color:var(--text3)">${t.atsakingas}</span>
+        <div style="display:flex;align-items:center;gap:4px"><div class="pbar-wrap" style="width:44px"><div class="pbar" style="width:${t.eiga}%"></div></div><span style="font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace">${t.eiga}%</span></div>
+      </div>
+    </div>`).join('');
+    return`<div class="k-col"><div class="k-col-hd" style="border-bottom:2px solid ${cl}"><span class="k-col-title">${s}</span><span class="k-cnt" style="background:${cl}22;color:${cl}">${g[s].length}</span></div>${cards||'<div style="font-size:12px;color:var(--text3);text-align:center;padding:1.5rem 0">—</div>'}</div>`;
+  }).join('')}</div>`;
+}
+
+/* CALENDAR */
+function bCal(){
+  const clrs=['#378ADD','#1D9E75','#EF9F27','#7F77DD','#E24B4A','#0F6E56','#888780'];
+  const cols=MN.map((m,mi)=>{
+    const mn=mi+1;const mt=ftasks.filter(t=>t.mp&&t.mp[mn]);
+    const items=mt.slice(0,6).map((t,i)=>`<div class="cal-item" style="background:${clrs[i%7]}18;color:${clrs[i%7]};border-left:2px solid ${clrs[i%7]}" onclick="openView(${t.id})" title="${t.veikla}: ${t.mp[mn]}">${t.nr}</div>`).join('');
+    const more=mt.length>6?`<div style="font-size:9px;color:var(--text3);text-align:center">+${mt.length-6}</div>`:'';
+    return`<div><div class="cal-ml">${m.slice(0,3)}</div><div class="cal-mb">${items||'<div style="font-size:9px;color:var(--border2);text-align:center;padding:6px 0">—</div>'}${more}</div></div>`;
+  }).join('');
+  return`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:.75rem;align-items:center">
+    <select class="sb-sel" id="kcA" onchange="applyFilters()" style="width:auto"><option value="">Visi darbuotojai</option>${[...new Set(tasks.flatMap(t=>[t.savininkas,t.atsakingas]).filter(p=>p&&p!=='-'))].sort().map(p=>`<option>${p}</option>`).join('')}</select>
+    <select class="sb-sel" id="kcT" onchange="applyFilters()" style="width:auto"><option value="">Visi tipai</option><option>APVIS</option><option>Naujos</option><option>Esamos</option><option>Dokumentacija</option></select>
+    <span style="font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace">${ftasks.filter(t=>Object.keys(t.mp||{}).length>0).length} su mėnesiniu planu</span>
+  </div>
+  <div class="cal-grid">${cols}</div>
+  <div style="font-size:11px;color:var(--text3)">Spausti ant kodo → atidaryti detalę. Kairysis skaičius – mėnesis.</div>`;
+}
+
+/* STATS */
+function bStats(){
+  const n=tasks.length,vy=tasks.filter(t=>t.statusas==='Vykdoma').length,ba=tasks.filter(t=>t.statusas==='Baigta').length,la=tasks.filter(t=>t.statusas==='Laukiama sprendimo').length;
+  const avg=Math.round(tasks.reduce((s,t)=>s+t.eiga,0)/n);
+  const pg={10:0,9:0,8:0,7:0,low:0};
+  tasks.forEach(t=>{if(t.prioritetas>=10)pg[10]++;else if(t.prioritetas>=9)pg[9]++;else if(t.prioritetas>=8)pg[8]++;else if(t.prioritetas>=7)pg[7]++;else pg.low++;});
+  const mp=Math.max(...Object.values(pg));
+  const pc={10:'#A32D2D',9:'#854F0B',8:'#185FA5',7:'#3B6D11',low:'#5F5E5A'},pl={10:'P10',9:'P9',8:'P8',7:'P7',low:'≤P4'};
+  const prioR=Object.entries(pg).map(([k,v])=>`<div class="prio-row"><span class="prio-lbl" style="color:${pc[k]}">${pl[k]}</span><div class="prio-bg"><div class="prio-f" style="width:${Math.round((v/mp)*100)}%;background:${pc[k]}"></div></div><span class="prio-n">${v}</span></div>`).join('');
+  const pers={};tasks.forEach(t=>{[t.savininkas,t.atsakingas].forEach(p=>{if(p&&p!=='-')pers[p]=(pers[p]||0)+1;});});
+  const mxP=Math.max(...Object.values(pers));
+  const pwC=Object.entries(pers).sort((a,b)=>b[1]-a[1]).slice(0,14).map(([nm,c])=>`<div class="pw-card"><div class="pw-name">${nm}</div><div class="pw-bb"><div class="pw-bf" style="width:${Math.round((c/mxP)*100)}%"></div></div><div class="pw-c">${c} rol.</div></div>`).join('');
+  return`<div class="stats-grid">
+    <div class="stat-card"><div class="stat-lbl">Iš viso</div><div class="stat-val">${n}</div><div class="stat-sub">užduočių</div></div>
+    <div class="stat-card"><div class="stat-lbl">Vykdomos</div><div class="stat-val" style="color:var(--blue)">${vy}</div><div class="stat-sub">${Math.round(vy/n*100)}% viso</div></div>
+    <div class="stat-card"><div class="stat-lbl">Laukia sprendimo</div><div class="stat-val" style="color:var(--amber)">${la}</div><div class="stat-sub">reikia vadovybės</div></div>
+    <div class="stat-card"><div class="stat-lbl">Vid. eiga</div><div class="stat-val">${avg}%</div><div class="stat-sub">${ba} baigtos</div></div>
+  </div>
+  <div class="charts-row">
+    <div class="chart-card"><div class="ct-title">Pagal realizavimo tipą</div><div class="chart-wrap"><canvas id="ct"></canvas></div></div>
+    <div class="chart-card"><div class="ct-title">Pagal statusą</div><div class="chart-wrap"><canvas id="cs"></canvas></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
+    <div class="chart-card"><div class="ct-title">Pagal prioritetą</div><div style="margin-top:.25rem">${prioR}</div></div>
+    <div class="chart-card"><div class="ct-title">Darbuotojų rolės</div><div class="pw-grid" style="margin-top:0">${pwC}</div></div>
+  </div>`;
+}
+function drawCharts(){
+  if(chartT){chartT.destroy();chartT=null;}if(chartS){chartS.destroy();chartS=null;}
+  const tip={},sta={};tasks.forEach(t=>{tip[t.tipas]=(tip[t.tipas]||0)+1;sta[t.statusas]=(sta[t.statusas]||0)+1;});
+  const o={responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11},padding:7,boxWidth:10,boxHeight:10}}}};
+  chartT=new Chart(document.getElementById('ct'),{type:'doughnut',data:{labels:Object.keys(tip),datasets:[{data:Object.values(tip),backgroundColor:['#378ADD','#1D9E75','#888780','#EF9F27','#7F77DD'],borderWidth:0}]},options:o});
+  chartS=new Chart(document.getElementById('cs'),{type:'doughnut',data:{labels:Object.keys(sta),datasets:[{data:Object.values(sta),backgroundColor:Object.keys(sta).map(s=>STC[s]||'#888'),borderWidth:0}]},options:o});
+}
+
+/* VIEW MODAL */
+function openView(id){
+  const t=tasks.find(x=>x.id===id);
+  const plan=Object.keys(t.mp||{}).length?`<div class="sec-div">Mėnesinis planas</div><div class="plan-grid">${Object.entries(t.mp).map(([m,val])=>`<div class="plan-item"><div class="plan-m">${MN[parseInt(m)-1]}</div><div class="plan-t">${val}</div></div>`).join('')}</div>`:'';
+  const comments=t.komentarai.map(c=>`<div class="cbox"><div class="cmeta">${c.autorius} · ${c.data}</div><div class="ctext">${c.tekstas}</div></div>`).join('')||'<div style="font-size:12px;color:var(--text3);font-style:italic">Nėra komentarų</div>';
+  document.getElementById('mi').innerHTML=`
+    <div class="modal-hd">
+      <h2><span class="nr-chip">#${t.nr}</span>${t.veikla}</h2>
+      <button class="close-btn" onclick="closeM()">×</button>
+    </div>
+    <div style="padding:0 1.5rem .5rem;display:flex;gap:8px;flex-wrap:wrap;align-items:center">${pb(t.prioritetas)} ${tb(t.tipas)}<span style="font-size:12px;color:var(--text3)">· ${t.sritis}</span></div>
+    <div class="modal-tabs">
+      <button class="mtab active" onclick="mTab(this,'pd')">Detalė</button>
+      <button class="mtab" onclick="mTab(this,'pe')">Redaguoti</button>
+      <button class="mtab" onclick="mTab(this,'pc')">Komentarai (${t.komentarai.length})</button>
+    </div>
+    <div class="modal-body">
+      <div id="pd" class="modal-pane active">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:1rem">
+          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Savininkas</div><div style="font-size:13px">${t.savininkas}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Atsakingas</div><div style="font-size:13px">${t.atsakingas}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Statusas</div><div style="margin-top:2px">${sp(t.statusas,t.id)}</div></div>
+        </div>
+        <div style="margin-bottom:1rem">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Eiga – <span id="el" style="font-family:'IBM Plex Mono',monospace">${t.eiga}%</span></div>
+          <div class="prog-row"><input type="range" min="0" max="100" step="5" value="${t.eiga}" oninput="tasks.find(x=>x.id===${t.id}).eiga=parseInt(this.value);document.getElementById('el').textContent=this.value+'%';persist();applyFilters()"><span class="prog-val">${t.eiga}%</span></div>
+        </div>
+        ${t.rizika?`<div class="risk-box">⚠ ${t.rizika}</div>`:''}
+        ${plan}
+      </div>
+      <div id="pe" class="modal-pane">
+        <div class="fg-row"><div class="fg"><label>Nr. / Kodas</label><input id="e-nr" value="${t.nr}"></div><div class="fg"><label>Prioritetas (0–10)</label><input id="e-p" type="number" min="0" max="10" value="${t.prioritetas}"></div></div>
+        <div class="fg"><label>Veikla / Iniciatyva</label><textarea id="e-v" rows="3">${t.veikla}</textarea></div>
+        <div class="fg-row"><div class="fg"><label>Sritis</label><input id="e-sr" value="${t.sritis}"></div><div class="fg"><label>Tipas</label><select id="e-t">${['APVIS','Naujos','Esamos','Dokumentacija'].map(x=>`<option ${t.tipas===x?'selected':''}>${x}</option>`).join('')}</select></div></div>
+        <div class="fg-row"><div class="fg"><label>Savininkas</label><input id="e-sv" list="pl1" value="${t.savininkas}"><datalist id="pl1">${PERS.map(p=>`<option>${p}</option>`).join('')}</datalist></div><div class="fg"><label>Atsakingas</label><input id="e-at" list="pl2" value="${t.atsakingas}"><datalist id="pl2">${PERS.map(p=>`<option>${p}</option>`).join('')}</datalist></div></div>
+        <div class="fg-row"><div class="fg"><label>Statusas</label><select id="e-st">${ST.map(s=>`<option ${t.statusas===s?'selected':''}>${s}</option>`).join('')}</select></div><div class="fg"><label>Eiga (%)</label><input id="e-ei" type="number" min="0" max="100" value="${t.eiga}"></div></div>
+        <div class="fg"><label>Rizika</label><input id="e-r" value="${t.rizika||''}"></div>
+        <div class="fg"><label>Mėnesinis planas (JSON: {"1":"Sausis...","4":"Balandis..."})</label><textarea id="e-mp" rows="2">${JSON.stringify(t.mp||{})}</textarea></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:.5rem">
+          <button class="btn-sec" onclick="closeM()">Atšaukti</button>
+          <button class="btn-pri" onclick="saveEdit(${t.id})">Išsaugoti</button>
+        </div>
+      </div>
+      <div id="pc" class="modal-pane">
+        <div style="margin-bottom:1rem">${comments}</div>
+        <div class="sec-div">Naujas komentaras</div>
+        <div style="margin-top:.75rem">
+          <div class="fg-row" style="margin-bottom:.75rem">
+            <div class="fg"><label>Autorius</label><select id="nc-a">${PERS.map(p=>`<option>${p}</option>`).join('')}</select></div>
+            <div class="fg"><label>Data</label><input id="nc-d" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+          </div>
+          <div class="fg"><label>Komentaras</label><textarea id="nc-t" rows="3" placeholder="Rašyti komentarą..."></textarea></div>
+          <div style="display:flex;justify-content:flex-end;margin-top:.5rem"><button class="btn-pri" onclick="addC(${t.id})">Pridėti</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn-del" onclick="delTask(${t.id})">Ištrinti</button>
+      <div class="mf-r"><button class="btn-sec" onclick="closeM()">Uždaryti</button><button class="btn-pri" onclick="openEditModal(${t.id})">✎ Redaguoti viską</button></div>
+    </div>`;
+  document.getElementById('modal').style.display='block';
+}
+
+function mTab(btn,pId){
+  btn.closest('.modal').querySelectorAll('.mtab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  btn.closest('.modal').querySelectorAll('.modal-pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById(pId).classList.add('active');
+}
+
+function saveEdit(id){
+  const t=tasks.find(x=>x.id===id);
+  t.nr=g('e-nr')||t.nr;t.veikla=g('e-v')||t.veikla;t.sritis=g('e-sr')||t.sritis;
+  t.prioritetas=parseInt(g('e-p'))||0;t.tipas=g('e-t');
+  t.savininkas=g('e-sv')||t.savininkas;t.atsakingas=g('e-at')||t.atsakingas;
+  t.statusas=g('e-st');t.eiga=parseInt(g('e-ei'))||0;t.rizika=g('e-r');
+  try{t.mp=JSON.parse(g('e-mp')||'{}');}catch(e){}
+  persist();closeM();applyFilters();showToast('Išsaugota ✓');
+}
+
+function addC(id){
+  const txt=g('nc-t');if(!txt.trim()){alert('Įveskite komentarą');return;}
+  tasks.find(x=>x.id===id).komentarai.push({autorius:g('nc-a'),data:g('nc-d')||new Date().toISOString().slice(0,10),tekstas:txt});
+  persist();openView(id);setTimeout(()=>{const tabs=document.querySelectorAll('.mtab');if(tabs[2])mTab(tabs[2],'pc');},20);
+}
+
+function delTask(id){
+  if(!confirm('Tikrai ištrinti šią užduotį?'))return;
+  tasks=tasks.filter(t=>t.id!==id);ftasks=ftasks.filter(t=>t.id!==id);persist();closeM();render();showToast('Užduotis ištrinta','#888780');
+}
+
+/* ADD/EDIT FULL MODAL */
+function openEditModal(id){
+  const t=id?tasks.find(x=>x.id===id):null;
+  document.getElementById('mi').innerHTML=`
+    <div class="modal-hd"><h2>${t?`Redaguoti užduotį #${t.nr}`:'Nauja užduotis'}</h2><button class="close-btn" onclick="closeM()">×</button></div>
+    <div class="modal-body" style="padding-top:1rem">
+      <div class="fg-row"><div class="fg"><label>Nr. / Kodas</label><input id="n-nr" value="${t?t.nr:''}"></div><div class="fg"><label>Prioritetas (0–10)</label><input id="n-p" type="number" min="0" max="10" value="${t?t.prioritetas:5}"></div></div>
+      <div class="fg"><label>Veikla / Iniciatyva *</label><textarea id="n-v" rows="3" placeholder="Užduoties pavadinimas...">${t?t.veikla:''}</textarea></div>
+      <div class="fg-row"><div class="fg"><label>Sritis</label><input id="n-sr" placeholder="Pvz. APVIS, Infrastruktūra..." value="${t?t.sritis:''}"></div><div class="fg"><label>Tipas</label><select id="n-t">${['Esamos','Naujos','APVIS','Dokumentacija'].map(x=>`<option ${t&&t.tipas===x?'selected':''}>${x}</option>`).join('')}</select></div></div>
+      <div class="fg-row"><div class="fg"><label>Savininkas</label><input id="n-sv" list="nl1" value="${t?t.savininkas:''}"><datalist id="nl1">${PERS.map(p=>`<option>${p}</option>`).join('')}</datalist></div><div class="fg"><label>Atsakingas</label><input id="n-at" list="nl2" value="${t?t.atsakingas:''}"><datalist id="nl2">${PERS.map(p=>`<option>${p}</option>`).join('')}</datalist></div></div>
+      <div class="fg-row"><div class="fg"><label>Statusas</label><select id="n-st">${ST.map(s=>`<option ${t&&t.statusas===s?'selected':''}>${s}</option>`).join('')}</select></div><div class="fg"><label>Eiga (%)</label><input id="n-ei" type="number" min="0" max="100" value="${t?t.eiga:0}"></div></div>
+      <div class="fg"><label>Rizika</label><input id="n-r" placeholder="Galimos rizikos..." value="${t?t.rizika||'':''}"></div>
+      <div class="fg"><label>Mėnesinis planas (JSON: {"1":"Sausis...","4":"Balandis..."})</label><textarea id="n-mp" rows="2" placeholder='{"1":"Veikla sausį","4":"Veikla balandį"}'>${t?JSON.stringify(t.mp||{}):'{}'}</textarea></div>
+    </div>
+    <div class="modal-ft"><div></div><div class="mf-r"><button class="btn-sec" onclick="closeM()">Atšaukti</button><button class="btn-pri" onclick="saveTask(${t?t.id:'null'})">${t?'Išsaugoti':'Pridėti užduotį'}</button></div></div>`;
+  document.getElementById('modal').style.display='block';
+}
+
+function saveTask(id){
+  const v=g('n-v');if(!v.trim()){alert('Įveskite veiklos pavadinimą');return;}
+  let mp={};try{mp=JSON.parse(g('n-mp')||'{}');}catch(e){}
+  if(id&&id!=='null'){
+    const t=tasks.find(x=>x.id===id);
+    t.nr=g('n-nr')||t.nr;t.veikla=v;t.sritis=g('n-sr')||'—';
+    t.prioritetas=parseInt(g('n-p'))||0;t.tipas=g('n-t');
+    t.savininkas=g('n-sv')||'—';t.atsakingas=g('n-at')||'—';
+    t.statusas=g('n-st');t.eiga=parseInt(g('n-ei'))||0;
+    t.rizika=g('n-r');t.mp=mp;
+  }else{
+    const nid=Math.max(...tasks.map(t=>t.id))+1;
+    tasks.push({id:nid,nr:g('n-nr')||String(nid),sritis:g('n-sr')||'—',veikla:v,prioritetas:parseInt(g('n-p'))||5,tipas:g('n-t'),savininkas:g('n-sv')||'—',atsakingas:g('n-at')||'—',statusas:g('n-st'),eiga:parseInt(g('n-ei'))||0,komentarai:[],rizika:g('n-r'),mp});
+  }
+  closeM();persist();ftasks=[...tasks];applyFilters();showToast(id&&id!=='null'?'Išsaugota ✓':'Užduotis sukurta ✓');
+}
+
+function g(id){const e=document.getElementById(id);return e?(e.tagName==='TEXTAREA'||e.tagName==='INPUT'?e.value:e.value):''}
+function closeM(){document.getElementById('modal').style.display='none';}
+function closeOuter(e){if(e.target.classList.contains('overlay'))closeM();}
+
+init();
+</script>
+</body>
+</html>
